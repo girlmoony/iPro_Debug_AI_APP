@@ -15,7 +15,7 @@ class APCTestAppTop2Threshold {
         void start();
         void stop();
         void join();
-    private:
+
 // Forward declarations or include appropriate headers for these
 struct ORDER_DATA;
 struct Order;
@@ -68,7 +68,7 @@ enum class PostProcessResult {
     TOP2_MANUAL
 };
 
-
+private:
 
 // === Core Functions ===
 void run();
