@@ -6,6 +6,39 @@
 #include <iostream>
 #include <algorithm>
 
+#include <fstream>
+
+void save_confusion_matrix_csv(
+    const std::vector<std::vector<int>>& confusion,
+    const std::vector<std::string>& id_to_label,
+    const std::string& filename
+) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Could not open file for writing: " << filename << std::endl;
+        return;
+    }
+
+    // ヘッダー行
+    file << "true/pred";
+    for (const auto& label : id_to_label) {
+        file << "," << label;
+    }
+    file << "\n";
+
+    // 行：正解ラベル
+    for (size_t i = 0; i < id_to_label.size(); ++i) {
+        file << id_to_label[i];  // ラベル名（例："100_えび"）
+        for (size_t j = 0; j < id_to_label.size(); ++j) {
+            file << "," << confusion[i][j];
+        }
+        file << "\n";
+    }
+
+    file.close();
+    std::cout << "Confusion matrix saved to CSV: " << filename << std::endl;
+}
+
 void print_top_confused_pairs(const std::vector<std::string>& y_true, const std::vector<std::string>& y_pred) {
     // 1. クラス名を整数にマッピング
     std::set<std::string> class_names(y_true.begin(), y_true.end());
