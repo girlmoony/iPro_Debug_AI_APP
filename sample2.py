@@ -215,4 +215,36 @@ if os.path.exists(raw_path):
     except Exception as e:
         print(f"❌ 画像読み込みエラー: {raw_path} - {e}")
 
+    列追加、推論値情報を追加
+    # --- 1. ipro_log シート読み込み ---
+df_ipro = pd.read_excel(input_path, sheet_name="ipro_log")
+
+# --- 2. 検索とマッチング ---
+for _, m in matches.iterrows():
+    raw_filename = m['RawFile']
+    png_filename = os.path.splitext(raw_filename)[0] + ".png"
+    image_path = os.path.join("Wrong images", true_class, png_filename)
+
+    # 🔍 ipro_log から対応行を検索
+    ipro_match = df_ipro[df_ipro['fname'] == raw_filename]
+    if not ipro_match.empty:
+        row_match = ipro_match.iloc[0]
+        top1_class = row_match['pred_class']
+        top1_pred = row_match['pred_score']
+        top2_class = row_match['top2_pre']
+        top2_pred = row_match['top2_score']
+    else:
+        top1_class = top1_pred = top2_class = top2_pred = None
+
+    # ✅ 情報をすべて格納
+    results.append({
+        'index': len(results),
+        'classname': true_class,
+        'imagename': png_filename,
+        'image_path': image_path,
+        'top1_class': top1_class,
+        'top1_pred': top1_pred,
+        'top2_class': top2_class,
+        'top2_pred': top2_pred
+    })
 
