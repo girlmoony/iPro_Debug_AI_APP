@@ -202,3 +202,17 @@ wb.save(input_path)
 print("✅ 完了: 結果を 'result' シートに保存しました。")
 
 
+PNGの読み込む
+raw_path = row['image_path']
+if os.path.exists(raw_path):
+    try:
+        pil_img = Image.open(raw_path)
+        img_io = io.BytesIO()
+        pil_img.save(img_io, format='PNG')
+        img_io.seek(0)
+        xl_img = XLImage(img_io)
+        ws.add_image(xl_img, f'D{r}')
+    except Exception as e:
+        print(f"❌ 画像読み込みエラー: {raw_path} - {e}")
+
+
