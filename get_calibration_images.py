@@ -61,3 +61,23 @@ for label, image_paths in tqdm(class_to_images.items(), desc="Processing classes
 
 
 #pip install torch torchvision tqdm transformers
+
+
+import os, shutil
+from collections import defaultdict
+
+src_dir = "validation_dataset/"
+dst_dir = "calibration_dataset/"
+os.makedirs(dst_dir, exist_ok=True)
+
+per_class_limit = 10
+class_counter = defaultdict(int)
+
+for file in sorted(os.listdir(src_dir)):
+    class_name = file.split('_')[0]
+    if class_counter[class_name] < per_class_limit:
+        shutil.copy(os.path.join(src_dir, file), os.path.join(dst_dir, file))
+        class_counter[class_name] += 1
+    if len(class_counter) >= 288 and all(c >= per_class_limit for c in class_counter.values()):
+        break
+
