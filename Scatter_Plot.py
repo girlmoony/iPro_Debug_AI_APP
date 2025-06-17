@@ -46,3 +46,60 @@ for img_file, pos in zip(img_files, positions):
 
 # 保存
 wb.save('classification_scores.xlsx')
+
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image as ExcelImage
+
+# Excelファイル読み込み
+excel_path = 'classification_scores.xlsx'
+df = pd.read_excel(excel_path)
+
+# 指標リスト
+metrics = ['f1', 'precision', 'recall']
+img_files = []
+
+# 散布図を作成・保存
+for metric in metrics:
+    ipro_col = f'ipro_{metric}'
+    gpu_col = f'gpu_{metric}'
+    
+    # 相関係数計算
+    corr = np.corrcoef(df[ipro_col], df[gpu_col])[0, 1]
+    
+    # グラフ描画
+    plt.figure(figsize=(6, 6))
+    plt.scatter(df[ipro_col], df[gpu_col])
+    plt.plot([0, 1], [0, 1], 'r--', label='y = x')
+    for i in range(len(df)):
+        plt.text(df[ipro_col][i] + 0.005, df[gpu_col][i], str(df['class'][i]), fontsize=8)
+    plt.xlabel(f'iPro {metric.capitalize()}')
+    plt.ylabel(f'GPU {metric.capitalize()}')
+    plt.title(f'{metric.capitalize()} Comparison\n(Pearson r = {corr:.3f})')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    
+    # 保存
+    filename = f'{metric}_comparison.png'
+    plt.savefig(filename)
+    plt.close()
+    img_files.append(filename)
+
+# Excelファイルに画像を貼り付け
+wb = load_workbook(excel_path)
+ws = wb.create_sheet('Graphs') if 'Graphs' not in wb.sheetnames else wb['Graphs']
+
+# 各画像を適切な位置に貼る
+positions = ['A1', 'A20', 'A40']  # 位置調整（縦に並べる）
+for img_file, pos in zip(img_files, positions):
+    img = ExcelImage(img_file)
+    ws.add_image(img, pos)
+
+# 保存
+wb.save(excel_path)
+
