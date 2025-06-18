@@ -1,3 +1,33 @@
+pip install plotly kaleido openpyxl
+
+import plotly.express as px
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image as ExcelImage
+
+df = pd.read_excel('classification_scores.xlsx')
+
+def plotly_and_save(x_col, y_col, label_col, title, img_filename):
+    fig = px.scatter(df, x=x_col, y=y_col, hover_name=label_col, title=title)
+    fig.update_traces(marker=dict(size=5), text=None)
+    fig.write_image(img_filename)  # 保存（静的画像）
+
+# 画像保存
+plotly_and_save('ipro_f1', 'gpu_f1', 'class', 'F1 Score Comparison', 'f1.png')
+plotly_and_save('ipro_precision', 'gpu_precision', 'class', 'Precision Comparison', 'precision.png')
+plotly_and_save('ipro_recall', 'gpu_recall', 'class', 'Recall Comparison', 'recall.png')
+
+# Excelへの貼り付け（同じ）
+wb = load_workbook('classification_scores.xlsx')
+ws = wb.create_sheet('Graphs') if 'Graphs' not in wb.sheetnames else wb['Graphs']
+img_files = ['f1.png', 'precision.png', 'recall.png']
+positions = ['A1', 'A20', 'A40']
+for img_file, pos in zip(img_files, positions):
+    img = ExcelImage(img_file)
+    ws.add_image(img, pos)
+wb.save('classification_scores.xlsx')
+
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from openpyxl import load_workbook
