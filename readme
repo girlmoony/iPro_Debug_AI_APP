@@ -1,0 +1,87 @@
+OpenVINOで**BINモデルの中間層出力を取得する方法（公式的なやり方）**を以下にまとめます。
+
+✅【OpenVINOでの中間層出力指定の基本】
+OpenVINOでは、**モデル変換時（mo.py実行時）**に --output オプションを使って、特定の中間層を出力できるよう指定できます。
+
+■ ① mo.pyによる中間層出力の指定例
+bash
+コピーする
+編集する
+mo.py --input_model your_model.onnx --output layer_name
+ポイント：
+
+layer_name はONNXや元モデルでの出力させたい層の名前
+
+複数層を指定する場合はカンマ区切りで指定可能：
+
+bash
+コピーする
+編集する
+mo.py --input_model your_model.onnx --output layer1,layer2
+■ ② 出力したBINモデルの実行時、中間層出力の取得（Python例）
+OpenVINO推論時に、中間層出力を取得するコード例：
+
+python
+コピーする
+編集する
+from openvino.runtime import Core
+import numpy as np
+
+ie = Core()
+model = ie.read_model(model="your_model.xml", weights="your_model.bin")
+compiled_model = ie.compile_model(model, "CPU")
+
+# 入力名取得
+input_layer = compiled_model.input(0)
+output_layers = compiled_model.outputs
+
+# 確認：出力名リスト
+print([output.any_name for output in output_layers])
+
+# 入力データ準備
+input_data = np.random.rand(1, 3, 224, 224).astype(np.float32)
+
+# 推論実行
+results = compiled_model([input_data])
+
+# 中間層出力取得
+for output in output_layers:
+    output_data = results[output]
+    print(f"出力層 {output.any_name} の出力形状: {output_data.shape}")
+■ ③ 出力層名の確認方法
+ONNXやIR（xml）の構造確認ツールで層名を調べておく必要があります。
+
+確認方法：
+Netron（https://netron.app/） を使って、onnxやxmlを可視化するのが最も簡単です
+
+出力させたい層名をNetron上で確認し、--output に指定
+
+✅【重要な注意点】
+全ての層が出力可能とは限らない（畳み込み層、ReLUなど一部不可のケースあり）
+
+出力させると、モデル実行速度が低下する場合がある
+
+勾配情報（Backpropagation）はOpenVINOでは取れない（純粋なGrad-CAM不可）
+
+✅【結論】
+✔ 中間層の「特徴マップ」をBINモデルレベルで取得するのは可能
+✔ ただし、勾配ベースのGrad-CAMそのものはOpenVINOでは再現できない
+✔ それでも、注目領域の傾向把握や比較分析には十分使える
+
+✅【必要なら】
+実データを使った中間層出力実行サンプルコード
+
+Netronでの層名確認方法の詳しい説明
+
+GPU用の純粋なGrad-CAMコードと、OpenVINO版の中間層比較コードの組み合わせ版
+
+ご用意できますので、「○○版コード欲しい」と具体的に教えてください！
+
+
+
+
+
+
+
+
+
