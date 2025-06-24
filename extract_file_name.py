@@ -11,6 +11,16 @@ attr_json = {
     "1303@5": ["新型", "旧型", "下", "右"]
     # 必要な情報を追加
 }
+# JSONファイルのパス
+json_file = 'attribute_info.json'
+
+# JSON読み込み
+with open(json_file, 'r', encoding='utf-8') as f:
+    attr_json = json.load(f)
+
+# 確認
+print(attr_json)
+
 
 # shopコードとseat番号の抽出関数
 def extract_shop_seat(filename):
