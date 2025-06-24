@@ -30,6 +30,18 @@ def extract_shop_seat(filename):
     seat = seat_full.split('-')[1]
     return shop, seat
 
+def extract_shop_seat(filename):
+    parts = filename.split('_')  
+    # parts[0]から']'の位置を探して、その後ろを取得
+    bracket_idx = parts[0].find(']')
+    shop = parts[0][bracket_idx + 1:]  # ]の次の文字以降がshopコード
+    
+    # parts[1]のハイフン区切りの後ろがseat番号
+    seat_full = parts[1]
+    seat = seat_full.split('-')[1]
+    
+    return shop, seat
+
 # shopとseat列を追加
 ipro_df['shop'] = ipro_df['画像名'].apply(lambda x: extract_shop_seat(x)[0])
 ipro_df['seat'] = ipro_df['画像名'].apply(lambda x: extract_shop_seat(x)[1])
