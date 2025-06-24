@@ -50,3 +50,25 @@ with pd.ExcelWriter(excel_file, mode='a', engine='openpyxl', if_sheet_exists='re
     ipro_df.to_excel(writer, sheet_name='判定結果_属性付加', index=False)
 
 print('判定結果にshop, seat, 属性4列を追加し、新しいシートに保存しました。')
+
+# 画像名の次に追加したい列
+new_columns = ['shop', 'seat', '属性1', '属性2', '属性3', '属性4']
+
+# 既存列のリスト取得
+cols = list(ipro_df.columns)
+
+# 画像名の位置を取得
+img_idx = cols.index('画像名')
+
+# 新しい列順序を作成
+reordered_cols = cols[:img_idx + 1] + new_columns + [col for col in cols if col not in new_columns and col != '画像名']
+
+# 列順序を並び替え
+ipro_df = ipro_df[reordered_cols]
+
+# 元シートを上書き（シート名は同じまま）
+with pd.ExcelWriter(excel_file, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+    ipro_df.to_excel(writer, sheet_name='判定結果', index=False)
+
+print('元シートにshop, seat, 属性4列を画像名の次に追加し、上書き保存しました。')
+
