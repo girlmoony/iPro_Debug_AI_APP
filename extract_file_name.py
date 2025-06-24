@@ -84,3 +84,28 @@ with pd.ExcelWriter(excel_file, mode='a', engine='openpyxl', if_sheet_exists='re
 
 print('元シートにshop, seat, 属性4列を画像名の次に追加し、上書き保存しました。')
 
+import pandas as pd
+from scipy.stats import chi2_contingency
+
+# データ読み込み（シートから読み込んだ前提）
+df = pd.read_excel('判定結果まとめ.xlsx', sheet_name='判定結果')
+
+# 判定結果から「IPROだけ間違い」= × / × もしくは 差分対象 のものだけを見る場合は、事前にフィルタしてください
+
+# 属性ごとにクロス集計＆カイ二乗検定
+for col in ['shop', 'seat', '属性1', '属性2', '属性3', '属性4']:
+    print(f"\n--- {col} と判定結果の関係 ---")
+    
+    # クロス集計
+    ct = pd.crosstab(df[col], df['判定結果'])
+    print(ct)
+    
+    # カイ二乗検定
+    chi2, p, _, _ = chi2_contingency(ct)
+    print(f"カイ二乗統計量: {chi2:.2f}, p値: {p:.4f}")
+    
+    if p < 0.05:
+        print("→ 有意な関係あり（この属性と判定結果に強い関係がある可能性）")
+    else:
+        print("→ 有意な関係なし（この属性と判定結果に強い関係は見つからず）")
+
