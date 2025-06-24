@@ -159,3 +159,48 @@ with pd.ExcelWriter(excel_file, mode='a', engine='openpyxl', if_sheet_exists='re
 
 print('カイ二乗検定結果を新しいシート「カイ二乗検定結果」に保存しました。')
 
+
+import pandas as pd
+
+# データ読み込み
+df = pd.read_excel('判定結果まとめ.xlsx', sheet_name='判定結果')
+
+# 認識結果フラグ（〇 / 〇 を正解とする）
+df['正解フラグ'] = df['判定結果'].apply(lambda x: 1 if x.strip() == '〇 / 〇' else 0)
+
+結果_全体 = []
+結果_クラス別 = []
+
+# -------- 全体認識率集計 --------
+for col in ['shop', 'seat', '属性1', '属性2', '属性3', '属性4']:
+    集計 = df.groupby(col)['正解フラグ'].agg(['sum', 'count']).reset_index()
+    集計['認識率(%)'] = (集計['sum'] / 集計['count']) * 100
+    集計.insert(0, '分類単位', '全体')
+    集計.rename(columns={col: '属性値', 'sum': '正解件数', 'count': '総件数'}, inplace=True)
+    集計['属性名'] = col
+    結果_全体.append(集計[['分類単位', '属性名', '属性値', '正解件数', '総件数', '認識率(%)']])
+
+df_全体 = pd.concat(結果_全体, ignore_index=True)
+
+# -------- クラス毎認識率集計 --------
+for true_class in df['true_label'].unique():
+    df_class = df[df['true_label'] == true_class]
+    
+    for col in ['shop', 'seat', '属性1', '属性2', '属性3', '属性4']:
+        集計 = df_class.groupby(col)['正解フラグ'].agg(['sum', 'count']).reset_index()
+        集計['認識率(%)'] = (集計['sum'] / 集計['count']) * 100
+        集計.insert(0, '分類単位', true_class)
+        集計.rename(columns={col: '属性値', 'sum': '正解件数', 'count': '総件数'}, inplace=True)
+        集計['属性名'] = col
+        結果_クラス別.append(集計[['分類単位', '属性名', '属性値', '正解件数', '総件数', '認識率(%)']])
+
+df_クラス別 = pd.concat(結果_クラス別, ignore_index=True)
+
+# -------- エクセルへ追記保存 --------
+with pd.ExcelWriter('判定結果まとめ.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+    df_全体.to_excel(writer, sheet_name='認識率_全体', index=False)
+    df_クラス別.to_excel(writer, sheet_name='認識率_クラス別', index=False)
+
+print("認識率一覧をエクセルに保存しました。")
+
+
