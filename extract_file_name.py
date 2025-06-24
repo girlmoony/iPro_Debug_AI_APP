@@ -108,4 +108,54 @@ for col in ['shop', 'seat', '属性1', '属性2', '属性3', '属性4']:
         print("→ 有意な関係あり（この属性と判定結果に強い関係がある可能性）")
     else:
         print("→ 有意な関係なし（この属性と判定結果に強い関係は見つからず）")
+import pandas as pd
+from scipy.stats import chi2_contingency
+from openpyxl import load_workbook
+
+# データ読み込み
+excel_file = '判定結果まとめ.xlsx'
+df = pd.read_excel(excel_file, sheet_name='判定結果')
+
+# 結果を蓄積するリスト
+results = []
+
+# -------- 全体集計 --------
+for col in ['shop', 'seat', '属性1', '属性2', '属性3', '属性4']:
+    ct = pd.crosstab(df[col], df['判定結果'])
+    
+    if ct.shape[0] > 1 and ct.shape[1] > 1:
+        chi2, p, _, _ = chi2_contingency(ct)
+        results.append({
+            '集計対象': '全体',
+            'クラス': '全体',
+            '属性': col,
+            'カイ二乗統計量': chi2,
+            'p値': p
+        })
+
+# -------- クラス毎の集計 --------
+for true_class in df['true_label'].unique():
+    df_class = df[df['true_label'] == true_class]
+    
+    for col in ['shop', 'seat', '属性1', '属性2', '属性3', '属性4']:
+        ct = pd.crosstab(df_class[col], df_class['判定結果'])
+        
+        if ct.shape[0] > 1 and ct.shape[1] > 1:
+            chi2, p, _, _ = chi2_contingency(ct)
+            results.append({
+                '集計対象': 'クラス別',
+                'クラス': true_class,
+                '属性': col,
+                'カイ二乗統計量': chi2,
+                'p値': p
+            })
+
+# 結果をDataFrame化
+result_df = pd.DataFrame(results)
+
+# Excelファイルに新しいシートとして追加
+with pd.ExcelWriter(excel_file, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+    result_df.to_excel(writer, sheet_name='カイ二乗検定結果', index=False)
+
+print('カイ二乗検定結果を新しいシート「カイ二乗検定結果」に保存しました。')
 
