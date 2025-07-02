@@ -26,8 +26,13 @@ ws.cell(row=1, column=画像貼り付け列_index, value="画像")
 
 # 各行に画像を貼り付け
 for i, row in df.iterrows():
+   判定結果 = row["判定結果"]
+
+    if 判定結果 == "〇/×": 
     img_name = row["画像名"]
     img_path = os.path.join(画像フォルダ, img_name)
+
+
 
     if os.path.exists(img_path):
         img = ExcelImage(img_path)
