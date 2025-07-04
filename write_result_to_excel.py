@@ -91,3 +91,72 @@ with pd.ExcelWriter(output_excel) as writer:
 
 print(f"\nExcel保存先: {output_excel}")
 print(f"図の保存先フォルダ: {output_img_dir}")
+
+
+
+import openpyxl
+from openpyxl.drawing.image import Image as XLImage
+import cv2
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+from skimage import feature
+import seaborn as sns
+
+# 出力ファイル・フォルダ
+output_excel = "output_with_images.xlsx"
+output_img_dir = "output_images"
+os.makedirs(output_img_dir, exist_ok=True)
+
+# ラベルファイル
+labels_df = pd.read_excel("your_labels.xlsx", sheet_name="image_details")
+
+# 特徴量抽出関数（省略。必要なら前述コードを入れてください）
+
+# 特徴量収集（省略。必要なら前述コードを入れてください）
+
+# データFrame化
+df = pd.DataFrame(data)
+
+# Excelブック作成
+wb = openpyxl.Workbook()
+del wb["Sheet"]  # デフォルトシート削除
+
+# 特徴量リスト
+feature_list = ["saturation", "noise_level", "texture_energy", "color_temp"]
+
+# 各クラスごとに処理
+for class_name in df["true_label"].unique():
+    sub_df = df[df["true_label"] == class_name]
+
+    # 図生成＆保存
+    img_paths = []
+    for feature in feature_list:
+        plt.figure(figsize=(8, 5))
+        sns.boxplot(data=sub_df, x="true_label", y=feature)
+        plt.title(f"{class_name} - {feature}")
+        plt.tight_layout()
+
+        img_path = os.path.join(output_img_dir, f"{class_name}_{feature}.png")
+        plt.savefig(img_path)
+        plt.close()
+
+        img_paths.append(img_path)
+
+    # シート作成
+    ws = wb.create_sheet(title=str(class_name))
+
+    # 画像貼り付け
+    row_offset = 1
+    for img_path in img_paths:
+        img = XLImage(img_path)
+        ws.add_image(img, f"A{row_offset}")
+
+        # 適当に行間隔を空ける（画像サイズにより調整必要）
+        row_offset += 20
+
+# 保存
+wb.save(output_excel)
+print(f"画像付きExcelを保存しました: {output_excel}")
+
