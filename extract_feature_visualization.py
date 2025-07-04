@@ -158,3 +158,40 @@ def extract_features_bgr_safe(image_path):
     color_temp = b_mean / (r_mean + 1e-5)
 
     return saturation, noise_level, texture_energy, color_temp
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# 散布図1：彩度 × ノイズレベル
+sns.scatterplot(data=df, x="saturation", y="noise_level", hue="label")
+plt.title("Saturation vs Noise Level by Label")
+plt.show()
+
+# 散布図2：彩度 × テクスチャ複雑度
+sns.scatterplot(data=df, x="saturation", y="texture_energy", hue="label")
+plt.title("Saturation vs Texture Energy by Label")
+plt.show()
+
+# 散布図3：ノイズレベル × テクスチャ複雑度
+sns.scatterplot(data=df, x="noise_level", y="texture_energy", hue="label")
+plt.title("Noise Level vs Texture Energy by Label")
+plt.show()
+
+# 単純ルールの例（しきい値は散布図を見て調整）
+
+# iPro弱い画像と判定するルール例（仮定）
+# 〇/× または ×/× を「iPro弱い」とする
+df["iPro_weak"] = df["label"].isin(["〇/×", "×/×"])
+
+# 例：彩度50以下 & ノイズレベル500以下を危険判定
+df["simple_rule_flag"] = (df["saturation"] <= 50) & (df["noise_level"] <= 500)
+
+# ルールの精度確認
+from sklearn.metrics import confusion_matrix, classification_report
+
+y_true = df["iPro_weak"]
+y_pred = df["simple_rule_flag"]
+
+print(confusion_matrix(y_true, y_pred))
+print(classification_report(y_true, y_pred))
+
