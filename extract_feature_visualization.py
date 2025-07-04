@@ -123,3 +123,38 @@ importances = model.feature_importances_
 plt.bar(X.columns, importances)
 plt.title("Feature Importance")
 plt.show()
+
+# BGR
+import cv2
+import numpy as np
+
+def extract_features_bgr_safe(image_path):
+    img = cv2.imread(image_path)
+    if img is None:
+        print(f"画像読み込み失敗: {image_path}")
+        return None
+
+    # imgはBGR形式のまま
+
+    # 彩度 (BGRから直接HSV変換可能)
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    saturation = np.mean(img_hsv[:, :, 1])
+
+    # ノイズレベル（ラプラシアンの分散）
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    noise_level = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+    # テクスチャ複雑度（GLCMエネルギー）
+    gray_8bit = cv2.resize(gray, (64, 64))
+    from skimage import feature
+    glcm = feature.greycomatrix(gray_8bit, distances=[1], angles=[0], symmetric=True, normed=True)
+    texture_energy = feature.greycoprops(glcm, 'energy')[0, 0]
+
+    # 色温度（青と赤の割合：BGR順なので注意）
+    b_mean = np.mean(img[:, :, 0])  # B
+    g_mean = np.mean(img[:, :, 1])  # G
+    r_mean = np.mean(img[:, :, 2])  # R
+
+    color_temp = b_mean / (r_mean + 1e-5)
+
+    return saturation, noise_level, texture_energy, color_temp
