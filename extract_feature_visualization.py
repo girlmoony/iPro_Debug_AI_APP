@@ -50,6 +50,13 @@ for idx, row in labels_df.iterrows():
     img_path = row["image_path"]
     label = row["label"]
 
+# for img_path in glob.glob(f"{image_folder}/*.jpg"):  # 拡張子変更可能
+#     fname = img_path.split("/")[-1]
+#     label_row = labels_df[labels_df["filename"] == fname]
+#     if label_row.empty:
+#         continue  # ラベルなしはスキップ
+
+    label = label_row["label"].values[0]  # 正確 or 不正確
     if not os.path.exists(img_path):
         print(f"ファイルが存在しません: {img_path}")
         continue
