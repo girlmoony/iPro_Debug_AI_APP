@@ -160,3 +160,120 @@ for class_name in df["true_label"].unique():
 wb.save(output_excel)
 print(f"画像付きExcelを保存しました: {output_excel}")
 
+
+import openpyxl
+from openpyxl.drawing.image import Image as XLImage
+import cv2
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from skimage import feature
+import seaborn as sns
+
+# 出力先
+output_excel = "output_per_class_feature_importance.xlsx"
+output_img_dir = "output_images"
+os.makedirs(output_img_dir, exist_ok=True)
+
+# ラベルファイル読み込み
+labels_df = pd.read_excel("your_labels.xlsx", sheet_name="image_details")
+
+# 特徴量抽出関数（省略、必要なら前述のものを使ってください）
+
+# 特徴量収集
+data = []
+for idx, row in labels_df.iterrows():
+    img_path = row["image_path"]
+    true_label = row["true_label"]
+
+    if not os.path.exists(img_path):
+        continue
+
+    features = extract_features(img_path)
+    if features is None:
+        continue
+
+    saturation, noise_level, texture_energy, color_temp = features
+
+    data.append({
+        "image_path": img_path,
+        "true_label": true_label,
+        "saturation": saturation,
+        "noise_level": noise_level,
+        "texture_energy": texture_energy,
+        "color_temp": color_temp
+    })
+
+df = pd.DataFrame(data)
+
+# Excelブック準備
+wb = openpyxl.Workbook()
+del wb["Sheet"]
+
+# 特徴量リスト
+feature_list = ["saturation", "noise_level", "texture_energy", "color_temp"]
+
+# クラスごとに処理
+for class_name in df["true_label"].unique():
+    sub_df = df[df["true_label"] == class_name]
+
+    if sub_df.shape[0] < 5:
+        print(f"{class_name}のデータが少なすぎるためスキップ")
+        continue
+
+    # ラベルエンコード（このクラス内のラベルで）
+    le = LabelEncoder()
+    sub_df["label_encoded"] = le.fit_transform(sub_df["true_label"])
+
+    # 特徴量とラベル
+    X_sub = sub_df[feature_list].values
+    y_sub = sub_df["label_encoded"].values
+
+    # モデル学習
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_sub, y_sub)
+
+    # 重要度取得
+    importances = model.feature_importances_
+    importance_df = pd.DataFrame({
+        "Feature": feature_list,
+        "Importance": importances
+    }).sort_values(by="Importance", ascending=False)
+
+    # 図生成・保存
+    img_paths = []
+    for feature in feature_list:
+        plt.figure(figsize=(8, 5))
+        sns.boxplot(data=sub_df, x="true_label", y=feature)
+        plt.title(f"{class_name} - {feature}")
+        plt.tight_layout()
+
+        img_path = os.path.join(output_img_dir, f"{class_name}_{feature}.png")
+        plt.savefig(img_path)
+        plt.close()
+
+        img_paths.append(img_path)
+
+    # シート作成
+    ws = wb.create_sheet(title=str(class_name))
+
+    # 重要度書き込み
+    ws.cell(row=1, column=1, value="重要特徴量（このクラス内）")
+    for i, (feat, imp) in enumerate(zip(importance_df["Feature"], importance_df["Importance"])):
+        ws.cell(row=i + 2, column=1, value=feat)
+        ws.cell(row=i + 2, column=2, value=float(imp))
+
+    # 画像貼り付け
+    row_offset = len(importance_df) + 4
+    for img_path in img_paths:
+        img = XLImage(img_path)
+        ws.add_image(img, f"A{row_offset}")
+        row_offset += 20
+
+wb.save(output_excel)
+print(f"クラスごとに個別の重要特徴量と画像を含めたExcelを保存しました： {output_excel}")
+
+
