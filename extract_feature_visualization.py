@@ -254,3 +254,28 @@ if features:
     (saturation, noise_level, texture_energy, color_temp,
      b_mean_bgr, g_mean_bgr, r_mean_bgr,
      brightness, sharpness, edge_density, contrast) = features
+
+
+
+#クラス毎に出す
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# 例の特徴量リスト
+feature_list = ["saturation", "noise_level", "texture_energy", "color_temp"]
+
+# すべてのtrue_label（20クラス）のループ
+for true_label in df["true_label"].unique():
+
+    # 該当クラスのデータだけ抽出
+    sub_df = df[df["true_label"] == true_label]
+
+    for feature in feature_list:
+        plt.figure(figsize=(6, 4))
+
+        # xは判定ラベル（〇/〇、×/×など）、yは特徴量
+        sns.boxplot(data=sub_df, x="label", y=feature)
+
+        plt.title(f"{true_label} - {feature}")
+        plt.show()
+
