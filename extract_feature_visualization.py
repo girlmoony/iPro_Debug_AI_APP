@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 import seaborn as sns
 import os
+from sklearn.preprocessing import LabelEncoder
 
 # エクセルから画像パスとラベルを取得
 labels_df = pd.read_excel("labels.xlsx", sheet_name="image_details")
@@ -56,7 +57,13 @@ for idx, row in labels_df.iterrows():
 #     if label_row.empty:
 #         continue  # ラベルなしはスキップ
 
-    label = label_row["label"].values[0]  # 正確 or 不正確
+    # label = label_row["label"].values[0]  # 正確 or 不正確
+    # ラベルをエンコード（4クラス）
+    le = LabelEncoder()
+    df["label_encoded"] = le.fit_transform(df["label"])
+    
+    print(le.classes_)  # どの順番で数字に対応してるか確認
+    
     if not os.path.exists(img_path):
         print(f"ファイルが存在しません: {img_path}")
         continue
@@ -90,7 +97,8 @@ plt.title("Noise Level by Label")
 plt.show()
 
 sns.boxplot(data=df, x="label", y="texture_energy")
-plt.title("Texture Energy by Label")
+# plt.title("Texture Energy by Label")
+plt.title("Saturation by Label (4クラス)")
 plt.show()
 
 sns.boxplot(data=df, x="label", y="color_temp")
@@ -100,6 +108,7 @@ plt.show()
 # モデル構築
 X = df[["saturation", "noise_level", "texture_energy", "color_temp"]]
 y = df["label"].map({"正確": 0, "不正確": 1})
+y = df["label_encoded"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=42)
 
