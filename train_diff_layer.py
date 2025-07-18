@@ -92,3 +92,118 @@ train_one_phase(model, train_loader, val_loader, "Phase 4 - QAT", num_epochs=6, 
 # 最终保存
 torch.save(model.state_dict(), "final_model.pth")
 print("✅ 完成全部训练阶段。")
+
+
+import torch
+from torch import nn, optim
+from torch.optim.lr_scheduler import StepLR
+
+# モデルとデバイス
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = YourEfficientNetModel()  # 例: timm.create_model('efficientnet_b4', pretrained=True)
+model.classifier = nn.Linear(in_features=model.classifier.in_features, out_features=288)
+model = model.to(device)
+
+# =============================
+# Layer解凍関数
+# =============================
+def unfreeze_layers(model, epoch):
+    # 全て一度凍結
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # classifier は常に解凍
+    for param in model.classifier.parameters():
+        param.requires_grad = True
+
+    if epoch >= 20:
+        for name, param in model.named_parameters():
+            if any(b in name for b in ['blocks.7', 'blocks.8']):
+                param.requires_grad = True
+
+    if epoch >= 40:
+        for name, param in model.named_parameters():
+            if 'blocks.6' in name:
+                param.requires_grad = True
+
+    if epoch >= 60:
+        for param in model.parameters():
+            param.requires_grad = True
+
+# =============================
+# Optimizer + Scheduler
+# =============================
+def setup_optimizer_and_scheduler(model, epoch):
+    if epoch < 20:
+        lr = 1e-3
+    elif epoch < 40:
+        lr = 1e-4
+    elif epoch < 60:
+        lr = 1e-5
+    else:
+        lr = 5e-6
+
+    params_to_update = [p for p in model.parameters() if p.requires_grad]
+    optimizer = optim.Adam(params_to_update, lr=lr)
+    scheduler = StepLR(optimizer, step_size=10, gamma=0.9)  # 10epochごとにLRを減衰
+    return optimizer, scheduler
+
+# =============================
+# 学習ループ
+# =============================
+num_epochs = 100
+best_acc = 0.0
+
+for epoch in range(num_epochs):
+    print(f"\nEpoch {epoch+1}/{num_epochs}")
+
+    # 段階的に解凍
+    unfreeze_layers(model, epoch)
+
+    # optimizerとscheduler再設定
+    optimizer, scheduler = setup_optimizer_and_scheduler(model, epoch)
+
+    # ========== Training ==========
+    model.train()
+    running_loss = 0.0
+    correct = 0
+
+    for images, labels in train_loader:
+        images, labels = images.to(device), labels.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = nn.CrossEntropyLoss()(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item() * images.size(0)
+        correct += (outputs.argmax(1) == labels).sum().item()
+
+    epoch_loss = running_loss / len(train_dataset)
+    epoch_acc = correct / len(train_dataset)
+    print(f"Train Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}")
+
+    # ========== Validation ==========
+    model.eval()
+    val_correct = 0
+
+    with torch.no_grad():
+        for images, labels in val_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            val_correct += (outputs.argmax(1) == labels).sum().item()
+
+    val_acc = val_correct / len(val_dataset)
+    print(f"Validation Acc: {val_acc:.4f}")
+
+    # モデル保存
+    if val_acc > best_acc:
+        best_acc = val_acc
+        torch.save(model.state_dict(), 'best_model.pt')
+        print(f"✅ Best model updated: {best_acc:.4f}")
+
+    # scheduler step
+    scheduler.step()
+
+
