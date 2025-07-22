@@ -39,8 +39,24 @@ def setup_optimizer(model, epoch):
         optimizer = optim.Adam(params, lr=1e-3 if epoch < 10 else 1e-4)
     else:
         optimizer = optim.SGD(params, lr=1e-4, momentum=0.9)
-    
+
     return optimizer
+
+# =============================
+# Optimizer + StepLR Scheduler
+# =============================
+def setup_optimizer_and_scheduler(model, epoch):
+    params = [p for p in model.parameters() if p.requires_grad]
+
+    if epoch < 30:
+        optimizer = optim.Adam(params, lr=1e-3 if epoch < 10 else 1e-4)
+    else:
+        optimizer = optim.SGD(params, lr=1e-4, momentum=0.9)
+
+    # StepLRを使う（15 epochごとに lr を半分に）
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.5)
+
+    return optimizer, scheduler
 
 # =============================
 # Main トレーニングループ
@@ -66,6 +82,7 @@ def main(train_loader, val_loader, train_dataset, val_dataset, num_epochs=60):
 
         # optimizer 再構築
         optimizer = setup_optimizer(model, epoch)
+        
 
         # scheduler 準備
         if epoch < 30:
