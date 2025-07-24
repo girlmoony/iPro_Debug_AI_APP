@@ -1,0 +1,112 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import models
+
+# --- モデル準備（ImageNetから転移学習） ---
+model = models.efficientnet_b0(pretrained=True)
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, 288)
+
+# --- 全層を一旦凍結 ---
+for param in model.parameters():
+    param.requires_grad = False
+
+# --- 出力層だけを解凍（最初） ---
+for param in model.classifier.parameters():
+    param.requires_grad = True
+
+# --- Optimizer ---
+optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                      lr=0.01, momentum=0.9, weight_decay=1e-4)
+
+# --- CosineAnnealingLRスケジューラ（150ep想定） ---
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=150, eta_min=1e-5)
+
+# --- 解凍スケジュール ---
+def unfreeze_schedule(model, epoch):
+    if epoch == 15:
+        for param in model.features[6].parameters():
+            param.requires_grad = True
+    elif epoch == 30:
+        for param in model.features[5].parameters():
+            param.requires_grad = True
+    elif epoch == 45:
+        for param in model.features[4].parameters():
+            param.requires_grad = True
+    elif epoch == 60:
+        for param in model.features[0:4].parameters():
+            param.requires_grad = True  # 全層解凍
+
+# --- 学習ループ ---
+for epoch in range(150):
+    unfreeze_schedule(model, epoch)
+
+    model.train()
+    for images, labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+    scheduler.step()
+
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import models
+
+# --- 学習済みモデルロード（284クラス） ---
+model = models.efficientnet_b0(pretrained=False)
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, 284)
+model.load_state_dict(torch.load("sushi_284_model.pth"))  # パスは適宜変更
+
+# --- 288クラスに出力層を更新 ---
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, 288)
+
+# --- 全層凍結 ---
+for param in model.parameters():
+    param.requires_grad = False
+
+# --- 出力層だけを解凍（最初） ---
+for param in model.classifier.parameters():
+    param.requires_grad = True
+
+# --- Optimizer ---
+optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                      lr=0.01, momentum=0.9, weight_decay=1e-4)
+
+# --- CosineAnnealingLR（120エポック想定） ---
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=120, eta_min=1e-5)
+
+# --- 段階解凍（features[3]〜[6]まで） ---
+def unfreeze_schedule(model, epoch):
+    if epoch == 15:
+        for param in model.features[6].parameters():
+            param.requires_grad = True
+    elif epoch == 30:
+        for param in model.features[5].parameters():
+            param.requires_grad = True
+    elif epoch == 45:
+        for param in model.features[4].parameters():
+            param.requires_grad = True
+    elif epoch == 60:
+        for param in model.features[3].parameters():
+            param.requires_grad = True
+    # [0]〜[2]は固定（再学習しない）
+
+# --- 学習ループ ---
+for epoch in range(120):
+    unfreeze_schedule(model, epoch)
+
+    model.train()
+    for images, labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+    scheduler.step()
+
