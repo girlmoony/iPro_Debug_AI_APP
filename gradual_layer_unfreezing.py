@@ -5,6 +5,48 @@ from torchvision.models import efficientnet_b0
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 from tqdm import tqdm
 
+def unfreeze_layers(model, epoch, mode='partial'):
+    """
+    mode='partial': 段階的にfeatures.7→5→3→0を解凍（推奨）
+    mode='full': 80epoch以降で全層解凍
+    mode='freeze_low': features.0〜2は常に凍結
+    """
+    for param in model.parameters():
+        param.requires_grad = False
+
+    for param in model.classifier.parameters():
+        param.requires_grad = True
+
+    if epoch >= 20:
+        for name, param in model.named_parameters():
+            if "features.7" in name or "features.8" in name:
+                param.requires_grad = True
+
+    if epoch >= 40:
+        for name, param in model.named_parameters():
+            if "features.5" in name or "features.6" in name:
+                param.requires_grad = True
+
+    if epoch >= 60:
+        for name, param in model.named_parameters():
+            if "features.3" in name or "features.4" in name:
+                param.requires_grad = True
+
+    if mode == 'partial' and epoch >= 80:
+        for name, param in model.named_parameters():
+            if "features.0" in name or "features.1" in name or "features.2" in name:
+                param.requires_grad = True
+
+    if mode == 'full' and epoch >= 80:
+        for param in model.parameters():
+            param.requires_grad = True
+
+    if mode == 'freeze_low' and epoch >= 80:
+        # 全部解凍したいが浅層（features.0〜2）は除く
+        for name, param in model.named_parameters():
+            if "features.0" not in name and "features.1" not in name and "features.2" not in name:
+                param.requires_grad = True
+
 # ========== 段階的にLayerを解凍 ==========
 def unfreeze_layers(model, epoch):
     for param in model.parameters():
