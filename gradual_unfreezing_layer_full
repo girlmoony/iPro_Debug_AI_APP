@@ -37,6 +37,26 @@ def unfreeze_schedule(model, epoch):
         for param in model.features[0:4].parameters():
             param.requires_grad = True  # 全層解凍
 
+
+def unfreeze_schedule(model, epoch):
+    if epoch == 20:
+        for param in model.features[8].parameters():  # 最後のConvブロック
+            param.requires_grad = True
+    elif epoch == 40:
+        for param in model.features[6].parameters():
+            param.requires_grad = True
+        for param in model.features[7].parameters():
+            param.requires_grad = True
+    elif epoch == 60:
+        for param in model.features[4].parameters():
+            param.requires_grad = True
+        for param in model.features[5].parameters():
+            param.requires_grad = True
+    elif epoch == 80:
+        for i in range(0, 4):  # features[0]〜[3]
+            for param in model.features[i].parameters():
+                param.requires_grad = True
+
 # --- 学習ループ ---
 for epoch in range(150):
     unfreeze_schedule(model, epoch)
@@ -96,6 +116,26 @@ def unfreeze_schedule(model, epoch):
             param.requires_grad = True
     # [0]〜[2]は固定（再学習しない）
 
+def unfreeze_schedule(model, epoch):
+    if epoch == 20:
+        for param in model.features[8].parameters():
+            param.requires_grad = True
+    elif epoch == 40:
+        for param in model.features[6].parameters():
+            param.requires_grad = True
+        for param in model.features[7].parameters():
+            param.requires_grad = True
+    elif epoch == 60:
+        for param in model.features[4].parameters():
+            param.requires_grad = True
+        for param in model.features[5].parameters():
+            param.requires_grad = True
+    elif epoch == 80:
+        # 部分モードの場合、初期層も微調整
+        for i in range(0, 4):
+            for param in model.features[i].parameters():
+                param.requires_grad = True
+
 # --- 学習ループ ---
 for epoch in range(120):
     unfreeze_schedule(model, epoch)
@@ -109,4 +149,30 @@ for epoch in range(120):
         optimizer.step()
 
     scheduler.step()
+
+def unfreeze_schedule(model, epoch, mode='full'):
+    if epoch == 20:
+        for param in model.features[8].parameters():
+            param.requires_grad = True
+    elif epoch == 40:
+        for param in model.features[6].parameters():
+            param.requires_grad = True
+        for param in model.features[7].parameters():
+            param.requires_grad = True
+    elif epoch == 60:
+        for param in model.features[4].parameters():
+            param.requires_grad = True
+        for param in model.features[5].parameters():
+            param.requires_grad = True
+    elif epoch == 80:
+        if mode == 'partial':
+            # ✅ 部分モード：初期層も微調整
+            for i in range(0, 4):
+                for param in model.features[i].parameters():
+                    param.requires_grad = True
+        else:
+            # ❌ 通常モード：初期層は引き続き凍結（明示的に再凍結しておく）
+            for i in range(0, 4):
+                for param in model.features[i].parameters():
+                    param.requires_grad = False
 
