@@ -1,5 +1,0 @@
-
-Class,TP_Mean_Brightness,FN_Mean_Brightness,TP_Edge_Density,FN_Edge_Density,Difference_Notes
-class_001,124.3,109.8,0.023,0.034,"FN is darker and noisier"
-class_002,130.1,130.2,0.015,0.048,"No major difference"
-class_003,140.0,122.5,0.030,0.042,"FN shows higher edge complexity"
